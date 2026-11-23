@@ -1,8 +1,8 @@
 import asyncio
-from collections.abc import Sequence
 import colorama
-import Utils
+from collections.abc import Sequence
 
+import Utils
 from CommonClient import get_base_parser, handle_url_arg
 
 def launch_client(*args: Sequence[str]) -> None:

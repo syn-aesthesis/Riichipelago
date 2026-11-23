@@ -40,5 +40,7 @@ class RiichipelagoWorld(World):
         return items.get_random_filler_item_name(self)
 
     def fill_slot_data(self) -> Mapping[str, Any]:
-        slot_data = {}
+        slot_data = {
+            "test": True,
+        }
         return slot_data
