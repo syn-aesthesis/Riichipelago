@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from argparse import Namespace
 from typing import Any
 
@@ -7,6 +8,8 @@ from CommonClient import CommonContext, ClientCommandProcessor, server_loop, log
 from NetUtils import ClientStatus
 from MultiServer import mark_raw
 
+
+game_logger = logging.getLogger("Riichipelago")
 
 class RiichiCommandProcessor(ClientCommandProcessor):
     @mark_raw
@@ -45,8 +48,10 @@ class RiichiContext(CommonContext):
         password: str | None = None
     ) -> None:
         super().__init__(server_address, password)
+
         self.slot_data = {}
         self.items_processed_counter = 0
+        self.received_item_names: list[str] = []
 
     async def server_auth(self, password_requested: bool = False) -> None:
         if password_requested and not self.password:
@@ -64,20 +69,31 @@ class RiichiContext(CommonContext):
             new_items = self.items_received[self.items_processed_counter:]
             for item in new_items:
                 logger.info(f"{self.item_names.lookup_in_game(item.item)} from {self.player_names[item.player]}")
+                self.received_item_names.append(self.item_names.lookup_in_game(item.item))
             self.items_processed_counter += len(new_items)
+            self.refresh_ui()
+
+    def refresh_ui(self) -> None:
+        if self.ui is not None and hasattr(self.ui, "progress_view"):
+            self.ui.progress_view.refresh(self.received_item_names)
 
     def reset_session_state(self) -> None:
         super().reset_session_state()
         self.slot_data = {}
         self.items_processed_counter = 0
+        self.received_item_names = []
 
     def complete_location(self, location_id: int) -> None:
         self.locations_checked.add(location_id)
         Utils.async_start(self.check_locations({location_id}))
 
-    def complete_goal(self):
+    def complete_goal(self) -> None:
         self.finished_game = True
         Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
+
+    def make_gui(self):
+        from .gui import RiichiManager
+        return RiichiManager
 
 
 async def main(args: Namespace) -> None:
